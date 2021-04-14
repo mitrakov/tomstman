@@ -4,4 +4,4 @@ Simple Console Http Client
 ## Installation
 - download ZIP from "Releases" tab
 - unzip
-- run `sudo ln -s /full/path/to/tomstman.sh /usr/bin/tomstman.sh`
+- run `sudo ln -s /full/path/to/tomstman.sh /usr/bin/tomstman`
