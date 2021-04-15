@@ -1,7 +1,8 @@
 package com.mitrakoff.tomstman.view;
 
-import java.util.Arrays;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import com.googlecode.lanterna.*;
 import com.googlecode.lanterna.graphics.SimpleTheme;
 import com.googlecode.lanterna.gui2.*;
@@ -15,6 +16,7 @@ public class MainWindow extends BasicWindow {
     private final ComboBox<String> methodCombobox;
     private final TextBox bodyTextbox;
     private final TextBox responseTextbox;
+    private final Panel headersPanel;
 
     public MainWindow(String title, Controller controller) {
         super(title);
@@ -31,9 +33,17 @@ public class MainWindow extends BasicWindow {
         methodUrlPanel.addComponent(methodCombobox.withBorder(Borders.singleLine(" Method ")), BorderLayout.Location.LEFT);
         methodUrlPanel.addComponent(urlTextBox.withBorder(Borders.singleLine(" URL ")), BorderLayout.Location.CENTER);
 
+        // panel with Headers
+        headersPanel = new Panel(new GridLayout(2));
+
+        // panel with Method/URL and headers
+        final Panel methodUrlHeadersPanel = new Panel(new LinearLayout());
+        methodUrlHeadersPanel.addComponent(methodUrlPanel);
+        methodUrlHeadersPanel.addComponent(headersPanel, LinearLayout.createLayoutData(LinearLayout.Alignment.Fill));
+
         // request panel (main area)
         final Panel requestPanel = new Panel(new BorderLayout());
-        requestPanel.addComponent(methodUrlPanel, BorderLayout.Location.TOP);
+        requestPanel.addComponent(methodUrlHeadersPanel, BorderLayout.Location.TOP);
         requestPanel.addComponent(bodyTextbox.withBorder(Borders.singleLine(" Json Body ")), BorderLayout.Location.CENTER);
         requestPanel.addComponent(responseTextbox.withBorder(Borders.singleLine(" Response ")), BorderLayout.Location.BOTTOM);
 
@@ -41,6 +51,7 @@ public class MainWindow extends BasicWindow {
         final Panel shortcutsPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(8));
         shortcutsPanel.addComponent(new Label(""));
         shortcutsPanel.addComponent(new Label("<F2>  Save request"));
+        shortcutsPanel.addComponent(new Label("<F3>  Add header"));
         shortcutsPanel.addComponent(new Label("<F5>  Send request"));
         shortcutsPanel.addComponent(new Label("<F8>  Remove request"));
         shortcutsPanel.addComponent(new Label("<F10> Exit"));
@@ -86,6 +97,9 @@ public class MainWindow extends BasicWindow {
         bodyTextbox.setText(data.jsonBody);
     }
 
+    /**
+     * Shortcut events processor
+     */
     private void handleHotkeys(KeyStroke keyStroke) {
         final int selectedIdx = collectionListbox.getSelectedIndex();
         final String name = selectedIdx >= 0 ? controller.getRequests().get(selectedIdx).name : "";
@@ -99,10 +113,14 @@ public class MainWindow extends BasicWindow {
                 final boolean isOkPressed = newName != null;
                 if (isOkPressed) {
                     if (!newName.isEmpty()) {
-                        controller.saveRequest(newName, url, method, body);
+                        controller.saveRequest(newName, url, method, body, getHeaders());
                         refreshRequestListbox();
                     } else MessageDialog.showMessageDialog(getTextGUI(), "Error", "Name must not be empty");
                 }
+                break;
+            case F3:
+                headersPanel.addComponent(new TextBox(new TerminalSize(16, 1)).withBorder(Borders.singleLine("Header name")));
+                headersPanel.addComponent(new TextBox().withBorder(Borders.singleLine("Header value")), GridLayout.createHorizontallyFilledLayoutData());
                 break;
             case F8:
                 final MessageDialogButton btn = MessageDialog.showMessageDialog(getTextGUI(), "", "Delete request?", MessageDialogButton.Yes, MessageDialogButton.No);
@@ -116,7 +134,7 @@ public class MainWindow extends BasicWindow {
                 final WaitingDialog dialog = WaitingDialog.showDialog(getTextGUI(),"", "Sending request");
                 dialog.setPosition(new TerminalPosition(size.getColumns()/2-10, size.getRows()/2));
                 new Thread(() -> { // dialog is modal, so we have to close() it from another thread
-                    final String[] result = controller.sendRequest(url, method, body);
+                    final String[] result = controller.sendRequest(url, method, body, getHeaders());
                     responseTextbox.setText(String.format("Status: %s\n\n%s", result[1], result[0]));
                     dialog.close();
                 }).start();
@@ -125,5 +143,35 @@ public class MainWindow extends BasicWindow {
                 close();
                 break;
         }
+    }
+
+    /**
+     * @return headers from GUI expressed as Map(key -> value)
+     */
+    private Map<String, String> getHeaders() {
+        final List<String> headerList = headersPanel
+                .getChildrenList()
+                .stream()
+                .filter(c -> c instanceof Border)
+                .map(b -> ((Border) b).getComponent())
+                .filter(b -> b instanceof TextBox)
+                .map(t -> ((TextBox) t).getText())
+                .collect(Collectors.toList());
+        return listToMap(headerList);
+    }
+
+    /**
+     * Converts List to Map by unzipping list values. List must contain even count of elements.
+     * Example: ["1", "a", "2", "b"] => {"1"->"a", "2"->"b"}
+     */
+    private <T> Map<T, T> listToMap(List<T> list) {
+        final int length = list.size();
+        if (length % 2 == 1) throw new IllegalArgumentException("List size must be even");
+
+        final Map<T, T> result = new HashMap<>(length /2);
+        for (int i = 0; i < length; i+=2) {
+            result.put(list.get(i), list.get(i+1));
+        }
+        return result;
     }
 }

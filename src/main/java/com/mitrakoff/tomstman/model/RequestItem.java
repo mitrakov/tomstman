@@ -1,44 +1,43 @@
 package com.mitrakoff.tomstman.model;
 
-import java.util.Objects;
+import java.util.*;
 
 public class RequestItem {
     final public String name;
     final public String url;
     final public String method;
     final public String jsonBody;
+    final public Map<String, String> headers;
 
-    public RequestItem(String name, String url, String method, String jsonBody) {
-        assert !name.isEmpty();
-        assert !url.isEmpty();
-        assert method.equals("GET") || method.equals("POST") || method.equals("PUT") || method.equals("DELETE")
-                || method.equals("PATCH") || method.equals("OPTIONS") || method.equals("HEAD");
-
+    public RequestItem(String name, String url, String method, String jsonBody, Map<String, String> headers) {
         this.name = name;
         this.url = url;
         this.method = method;
         this.jsonBody = jsonBody;
-    }
-
-    public static RequestItem fromString(String s) {
-        final String[] p = s.split("๏");
-        return new RequestItem(p[0], p[1], p[2], p.length == 4 ? p[3] : "");
+        this.headers = headers;
     }
 
     @Override
     public String toString() {
-        return String.format("%s๏%s๏%s๏%s", name, url, method, jsonBody);
+        return new StringJoiner(", ", RequestItem.class.getSimpleName() + "[", "]")
+                .add("name='" + name + "'")
+                .add("url='" + url + "'")
+                .add("method='" + method + "'")
+                .add("jsonBody='" + jsonBody + "'")
+                .add("headers=" + headers)
+                .toString();
     }
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof RequestItem)
-            return ((RequestItem)o).name.equals(this.name);
-        return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RequestItem that = (RequestItem) o;
+        return name.equals(that.name) && url.equals(that.url) && method.equals(that.method) && jsonBody.equals(that.jsonBody) && headers.equals(that.headers);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, url, method, jsonBody);
+        return Objects.hash(name, url, method, jsonBody, headers);
     }
 }

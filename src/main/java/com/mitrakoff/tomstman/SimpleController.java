@@ -1,6 +1,7 @@
 package com.mitrakoff.tomstman;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import com.mitrakoff.tomstman.model.Model;
 import com.mitrakoff.tomstman.model.RequestItem;
@@ -15,13 +16,13 @@ public class SimpleController implements Controller {
     }
 
     @Override
-    public String[] sendRequest(String url, String method, String jsonBody) {
-        return model.sendRequest(new RequestItem("", url, method, jsonBody));
+    public String[] sendRequest(String url, String method, String jsonBody, Map<String, String> headers) {
+        return model.sendRequest(new RequestItem("", url, method, jsonBody, headers));
     }
 
     @Override
-    public void saveRequest(String name, String url, String method, String jsonBody) {
-        model.saveRequest(new RequestItem(name, url, method, jsonBody));
+    public void saveRequest(String name, String url, String method, String jsonBody, Map<String, String> headers) {
+        model.saveRequest(new RequestItem(name, url, method, jsonBody, headers));
     }
 
     @Override

@@ -3,12 +3,14 @@ package com.mitrakoff.tomstman.model;
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.google.gson.Gson;
 import okhttp3.*;
 import org.ini4j.Ini;
 import org.ini4j.Profile;
 
 public class Model {
     private final OkHttpClient client = new OkHttpClient();
+    private final Gson gson = new Gson();
     private /*final*/ Ini ini;
     private List<RequestItem> requests = Collections.emptyList();
 
@@ -43,7 +45,7 @@ public class Model {
 
     public synchronized void saveRequest(RequestItem item) {
         try {
-            ini.add("requests", "item", item);
+            ini.add("requests", "item", gson.toJson(item));
             ini.store();
             reloadRequests();
         } catch (IOException e) {
@@ -55,7 +57,7 @@ public class Model {
         try {
             requests.removeIf(item -> item.name.equals(name));
             ini.remove("requests", "item");
-            requests.forEach(item -> ini.add("requests", "item", item));
+            requests.forEach(item -> ini.add("requests", "item", gson.toJson(item)));
             ini.store();
             reloadRequests();
         } catch (IOException e) {
@@ -68,7 +70,7 @@ public class Model {
         if (section != null) {
             final List<String> items = section.getAll("item");
             if (items != null)
-                this.requests = items.stream().map(RequestItem::fromString).collect(Collectors.toList());
+                this.requests = items.stream().map(s -> gson.fromJson(s, RequestItem.class)).collect(Collectors.toList());
         }
     }
 }
