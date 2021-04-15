@@ -22,7 +22,7 @@ public class SimpleController implements Controller {
 
     @Override
     public void saveRequest(String name, String url, String method, String jsonBody, Map<String, String> headers) {
-        model.saveRequest(new RequestItem(name, url, method, jsonBody, headers));
+        model.saveRequests(new RequestItem(name, url, method, jsonBody, headers));
     }
 
     @Override

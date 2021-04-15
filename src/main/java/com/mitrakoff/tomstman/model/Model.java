@@ -17,9 +17,11 @@ public class Model {
     public Model() {
         try {
             final File file = new File("settings.ini");
-            file.createNewFile();
+            final boolean newFileWasCreated = file.createNewFile();
             ini = new Ini(file);
-            reloadRequests();
+            if (newFileWasCreated)
+                addSampleRequests();
+            else reloadRequests();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -43,9 +45,11 @@ public class Model {
         return new String[]{};
     }
 
-    public synchronized void saveRequest(RequestItem item) {
+    public synchronized void saveRequests(RequestItem ... items) {
         try {
-            ini.add("requests", "item", gson.toJson(item));
+            for (RequestItem item: items) {
+                ini.add("requests", "item", gson.toJson(item));
+            }
             ini.store();
             reloadRequests();
         } catch (IOException e) {
@@ -72,5 +76,13 @@ public class Model {
             if (items != null)
                 this.requests = items.stream().map(s -> gson.fromJson(s, RequestItem.class)).collect(Collectors.toList());
         }
+    }
+
+    private synchronized void addSampleRequests() {
+        saveRequests(
+            new RequestItem("GET example.com", "https://example.com", "GET", "", Collections.emptyMap()),
+            new RequestItem("GET google.com", "https://google.com", "GET", "", Collections.emptyMap()),
+            new RequestItem("POST example.com", "https://example.com", "POST", "{\"json\": \"body\"}", Collections.singletonMap("Authorization", "Bearer 12345"))
+        );
     }
 }
