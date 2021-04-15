@@ -26,7 +26,7 @@ public class MainWindow extends BasicWindow {
         bodyTextbox = new TextBox(new TerminalSize(200, 10), "{\n  \n}", TextBox.Style.MULTI_LINE);
         responseTextbox = new TextBox(new TerminalSize(200, 30), "", TextBox.Style.MULTI_LINE).setReadOnly(true);
         collectionListbox = new ActionListBox(new TerminalSize(32, 999));
-        refreshRequestListbox();
+        refreshCollectionListbox();
 
         // panel with Method and URL
         final Panel methodUrlPanel = new Panel(new BorderLayout());
@@ -86,7 +86,7 @@ public class MainWindow extends BasicWindow {
         this.setComponent(mainPanel);
     }
 
-    private void refreshRequestListbox() {
+    private void refreshCollectionListbox() {
         collectionListbox.clearItems();
         controller.getRequests().forEach(request -> collectionListbox.addItem(request.toString(), () -> this.setDataToComponents(request)));
     }
@@ -95,6 +95,10 @@ public class MainWindow extends BasicWindow {
         urlTextBox.setText(data.url);
         methodCombobox.setSelectedItem(data.method);
         bodyTextbox.setText(data.jsonBody);
+        headersPanel.removeAllComponents();
+        for (Map.Entry<String, String> entry : data.headers.entrySet()) {
+            addHeader(entry.getKey(), entry.getValue());
+        }
     }
 
     /**
@@ -114,19 +118,18 @@ public class MainWindow extends BasicWindow {
                 if (isOkPressed) {
                     if (!newName.isEmpty()) {
                         controller.saveRequest(newName, url, method, body, getHeaders());
-                        refreshRequestListbox();
+                        refreshCollectionListbox();
                     } else MessageDialog.showMessageDialog(getTextGUI(), "Error", "Name must not be empty");
                 }
                 break;
             case F3:
-                headersPanel.addComponent(new TextBox(new TerminalSize(16, 1)).withBorder(Borders.singleLine("Header name")));
-                headersPanel.addComponent(new TextBox().withBorder(Borders.singleLine("Header value")), GridLayout.createHorizontallyFilledLayoutData());
+                addHeader("", "");
                 break;
             case F8:
                 final MessageDialogButton btn = MessageDialog.showMessageDialog(getTextGUI(), "", "Delete request?", MessageDialogButton.Yes, MessageDialogButton.No);
                 if (btn == MessageDialogButton.Yes) {
                     controller.removeRequest(name);
-                    refreshRequestListbox();
+                    refreshCollectionListbox();
                 }
                 break;
             case F5:
@@ -143,6 +146,14 @@ public class MainWindow extends BasicWindow {
                 close();
                 break;
         }
+    }
+
+    /**
+     * Adds a new Header-Key and Header-Value textboxes into HeaderPanel
+     */
+    private void addHeader(String key, String value) {
+        headersPanel.addComponent(new TextBox(new TerminalSize(16, 1), key).withBorder(Borders.singleLine(" Header name ")));
+        headersPanel.addComponent(new TextBox(value).withBorder(Borders.singleLine(" Header value ")), GridLayout.createHorizontallyFilledLayoutData());
     }
 
     /**

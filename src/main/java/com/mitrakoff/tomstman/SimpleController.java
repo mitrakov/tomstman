@@ -32,6 +32,6 @@ public class SimpleController implements Controller {
 
     @Override
     public List<RequestData> getRequests() {
-        return model.getRequests().stream().map(r -> new RequestData(r.name, r.url, r.method, r.jsonBody)).collect(Collectors.toList());
+        return model.getRequests().stream().map(r -> new RequestData(r.name, r.url, r.method, r.jsonBody, r.headers)).collect(Collectors.toList());
     }
 }
