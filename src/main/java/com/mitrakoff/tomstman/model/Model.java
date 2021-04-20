@@ -33,7 +33,7 @@ public class Model {
     public String[] sendRequest(RequestItem item) {
         try {
             final RequestBody body = RequestBody.create(item.jsonBody, MediaType.parse("application/json"));
-            final Request request = new Request.Builder().url(item.url).method(item.method, item.method.equals("GET") ? null : body).build();
+            final Request request = new Request.Builder().url(item.url).method(item.method, bodyAcceptable(item.method) ? body : null).build();
             final Response response = client.newCall(request).execute();
             if (response.body() != null)
                 return new String[]{response.body().string(), String.valueOf(response.code())};
@@ -67,6 +67,10 @@ public class Model {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private boolean bodyAcceptable(String method) {
+        return !method.equals("GET") && !method.equals("HEAD");
     }
 
     private synchronized void reloadRequests() {
