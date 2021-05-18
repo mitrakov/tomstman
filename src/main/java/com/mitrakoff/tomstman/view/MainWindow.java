@@ -137,8 +137,9 @@ public class MainWindow extends BasicWindow {
                 final WaitingDialog dialog = WaitingDialog.showDialog(getTextGUI(),"", "Sending request");
                 dialog.setPosition(new TerminalPosition(size.getColumns()/2-10, size.getRows()/2));
                 new Thread(() -> { // dialog is modal, so we have to close() it from another thread
-                    final String[] result = controller.sendRequest(url, method, body, getHeaders());
-                    responseTextbox.setText(String.format("Status: %s\n\n%s", result[1], result[0]));
+                    final ResponseData response = controller.sendRequest(url, method, body, getHeaders());
+                    final String status = response.status > 0 ? String.valueOf(response.status) : "ERROR";
+                    responseTextbox.setText(String.format("Status: %s    Elapsed time: %d msec\n\n%s", status, response.elapsedTimeMsec, response.response));
                     dialog.close();
                 }).start();
                 break;

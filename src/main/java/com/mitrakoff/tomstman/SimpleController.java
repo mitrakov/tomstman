@@ -1,12 +1,9 @@
 package com.mitrakoff.tomstman;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
-import com.mitrakoff.tomstman.model.Model;
-import com.mitrakoff.tomstman.model.RequestItem;
-import com.mitrakoff.tomstman.view.Controller;
-import com.mitrakoff.tomstman.view.RequestData;
+import com.mitrakoff.tomstman.model.*;
+import com.mitrakoff.tomstman.view.*;
 
 public class SimpleController implements Controller {
     private final Model model;
@@ -16,8 +13,9 @@ public class SimpleController implements Controller {
     }
 
     @Override
-    public String[] sendRequest(String url, String method, String jsonBody, Map<String, String> headers) {
-        return model.sendRequest(new RequestItem("", url, method, jsonBody, headers));
+    public ResponseData sendRequest(String url, String method, String jsonBody, Map<String, String> headers) {
+        final ResponseItem response = model.sendRequest(new RequestItem("", url, method, jsonBody, headers));
+        return new ResponseData(response.response, response.status, response.elapsedTimeMsec);
     }
 
     @Override
