@@ -22,7 +22,7 @@ public class MainWindow extends BasicWindow {
         super(title);
         this.controller = controller;
         urlTextBox = new TextBox(new TerminalSize(200, 1), "https://");
-        methodCombobox = new ComboBox<>("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD");
+        methodCombobox = new ComboBox<>("GET", "POST", "PUT", "DELETE", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH");
         bodyTextbox = new TextBox(new TerminalSize(200, 10), "{\n  \n}", TextBox.Style.MULTI_LINE);
         responseTextbox = new TextBox(new TerminalSize(200, 30), "", TextBox.Style.MULTI_LINE).setReadOnly(true);
         collectionListbox = new ActionListBox(new TerminalSize(32, 999));
@@ -50,10 +50,10 @@ public class MainWindow extends BasicWindow {
         // shortcuts panel
         final Panel shortcutsPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(8));
         shortcutsPanel.addComponent(new Label(""));
-        shortcutsPanel.addComponent(new Label("<F2>  Save request"));
-        shortcutsPanel.addComponent(new Label("<F3>  Add header"));
-        shortcutsPanel.addComponent(new Label("<F5>  Send request"));
-        shortcutsPanel.addComponent(new Label("<F8>  Remove request"));
+        shortcutsPanel.addComponent(new Label("<F2> Save request"));
+        shortcutsPanel.addComponent(new Label("<F3> Add header"));
+        shortcutsPanel.addComponent(new Label("<F5> Send request"));
+        shortcutsPanel.addComponent(new Label("<F8> Remove request"));
         shortcutsPanel.addComponent(new Label("<F10> Exit"));
 
         // content panel
