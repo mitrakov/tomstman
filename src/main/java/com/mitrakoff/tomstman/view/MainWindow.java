@@ -10,6 +10,10 @@ import com.googlecode.lanterna.gui2.dialogs.*;
 import com.googlecode.lanterna.input.KeyStroke;
 
 public class MainWindow extends BasicWindow {
+    static private final LayoutData FILL = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill);
+    static private final LayoutData FILL_GROW = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow);
+    static private final int BODY_LINES_MIN = 6;
+
     private final Controller controller;
     private final ActionListBox collectionListbox;
     private final TextBox urlTextBox;
@@ -21,34 +25,34 @@ public class MainWindow extends BasicWindow {
     public MainWindow(String title, Controller controller) {
         super(title);
         this.controller = controller;
-        urlTextBox = new TextBox(new TerminalSize(200, 1), "https://");
+        urlTextBox = new TextBox("https://");
         methodCombobox = new ComboBox<>("GET", "POST", "PUT", "DELETE", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH");
-        bodyTextbox = new TextBox(new TerminalSize(200, 10), "{\n  \n}", TextBox.Style.MULTI_LINE);
-        responseTextbox = new TextBox(new TerminalSize(200, 30), "", TextBox.Style.MULTI_LINE).setReadOnly(true);
-        collectionListbox = new ActionListBox(new TerminalSize(32, 999));
+        bodyTextbox = new TextBox(new TerminalSize(0, BODY_LINES_MIN), "{\n  \n}", TextBox.Style.MULTI_LINE);
+        responseTextbox = new TextBox("", TextBox.Style.MULTI_LINE).setReadOnly(true);
+        collectionListbox = new ActionListBox();
         refreshCollectionListbox();
 
         // panel with Method and URL
-        final Panel methodUrlPanel = new Panel(new BorderLayout());
-        methodUrlPanel.addComponent(methodCombobox.withBorder(Borders.singleLine(" Method ")), BorderLayout.Location.LEFT);
-        methodUrlPanel.addComponent(urlTextBox.withBorder(Borders.singleLine(" URL ")), BorderLayout.Location.CENTER);
+        final Panel methodUrlPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(0));
+        methodUrlPanel.addComponent(methodCombobox.withBorder(Borders.singleLine(" Method ")), FILL);
+        methodUrlPanel.addComponent(urlTextBox.withBorder(Borders.singleLine(" URL ")), FILL_GROW);
 
         // panel with Headers
-        headersPanel = new Panel(new GridLayout(2));
+        headersPanel = new Panel(new LinearLayout(Direction.VERTICAL));
 
         // panel with Method/URL and headers
-        final Panel methodUrlHeadersPanel = new Panel(new LinearLayout());
-        methodUrlHeadersPanel.addComponent(methodUrlPanel);
-        methodUrlHeadersPanel.addComponent(headersPanel, LinearLayout.createLayoutData(LinearLayout.Alignment.Fill));
+        final Panel methodUrlHeadersPanel = new Panel(new LinearLayout(Direction.VERTICAL));
+        methodUrlHeadersPanel.addComponent(methodUrlPanel, FILL);
+        methodUrlHeadersPanel.addComponent(headersPanel, FILL_GROW);
 
         // request panel (main area)
-        final Panel requestPanel = new Panel(new BorderLayout());
-        requestPanel.addComponent(methodUrlHeadersPanel, BorderLayout.Location.TOP);
-        requestPanel.addComponent(bodyTextbox.withBorder(Borders.singleLine(" Json Body ")), BorderLayout.Location.CENTER);
-        requestPanel.addComponent(responseTextbox.withBorder(Borders.singleLine(" Response ")), BorderLayout.Location.BOTTOM);
+        final Panel requestPanel = new Panel(new LinearLayout(Direction.VERTICAL));
+        requestPanel.addComponent(methodUrlHeadersPanel, FILL);
+        requestPanel.addComponent(bodyTextbox.withBorder(Borders.singleLine(" Json Body ")), FILL);
+        requestPanel.addComponent(responseTextbox.withBorder(Borders.singleLine(" Response ")), FILL_GROW);
 
         // shortcuts panel
-        final Panel shortcutsPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(8));
+        final Panel shortcutsPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(5));
         shortcutsPanel.addComponent(new Label(""));
         shortcutsPanel.addComponent(new Label("<F2> Save request"));
         shortcutsPanel.addComponent(new Label("<F3> Add header"));
@@ -57,14 +61,14 @@ public class MainWindow extends BasicWindow {
         shortcutsPanel.addComponent(new Label("<F10> Exit"));
 
         // content panel
-        final Panel contentPanel = new Panel(new BorderLayout());
-        contentPanel.addComponent(collectionListbox.withBorder(Borders.singleLine(" Request Collection ")), BorderLayout.Location.LEFT);
-        contentPanel.addComponent(requestPanel.withBorder(Borders.singleLine(" Request ")), BorderLayout.Location.CENTER);
+        final Panel contentPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(0));
+        contentPanel.addComponent(collectionListbox.withBorder(Borders.singleLine(" Request Collection ")), FILL);
+        contentPanel.addComponent(requestPanel.withBorder(Borders.singleLine(" Request ")), FILL_GROW);
 
         // main panel
-        final Panel mainPanel = new Panel(new BorderLayout());
-        mainPanel.addComponent(shortcutsPanel.withBorder(Borders.singleLine(" T O M S T M A N ")), BorderLayout.Location.TOP);
-        mainPanel.addComponent(contentPanel, BorderLayout.Location.CENTER);
+        final Panel mainPanel = new Panel(new LinearLayout(Direction.VERTICAL));
+        mainPanel.addComponent(shortcutsPanel.withBorder(Borders.singleLine(" T O M S T M A N ")), FILL);
+        mainPanel.addComponent(contentPanel, FILL_GROW);
 
         // this
         this.setTheme(SimpleTheme.makeTheme(
@@ -153,8 +157,11 @@ public class MainWindow extends BasicWindow {
      * Adds a new Header-Key and Header-Value textboxes into HeaderPanel
      */
     private void addHeader(String key, String value) {
-        headersPanel.addComponent(new TextBox(new TerminalSize(16, 1), key).withBorder(Borders.singleLine(" Header name ")));
-        headersPanel.addComponent(new TextBox(value).withBorder(Borders.singleLine(" Header value ")), GridLayout.createHorizontallyFilledLayoutData());
+        final Panel row = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(0));
+        row.addComponent(new TextBox(new TerminalSize(16, 1), key).withBorder(Borders.singleLine(" Header name ")), FILL);
+        row.addComponent(new TextBox(value).withBorder(Borders.singleLine(" Header value ")), FILL_GROW);
+
+        headersPanel.addComponent(row, FILL_GROW);
     }
 
     /**
