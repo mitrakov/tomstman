@@ -9,6 +9,7 @@ import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.*;
 import com.googlecode.lanterna.input.KeyStroke;
 
+@SuppressWarnings("WeakerAccess")
 public class MainWindow extends BasicWindow {
     static private final LayoutData FILL = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill);
     static private final LayoutData FILL_GROW = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow);
@@ -168,15 +169,25 @@ public class MainWindow extends BasicWindow {
      * @return headers from GUI expressed as Map(key -> value)
      */
     private Map<String, String> getHeaders() {
-        final List<String> headerList = headersPanel
-                .getChildrenList()
+        final List<String> headerList = getChildrenDeep(headersPanel)
                 .stream()
-                .filter(c -> c instanceof Border)
-                .map(b -> ((Border) b).getComponent())
-                .filter(b -> b instanceof TextBox)
-                .map(t -> ((TextBox) t).getText())
+                .filter(c -> c instanceof TextBox)
+                .map(t -> ((TextBox)t).getText())
                 .collect(Collectors.toList());
         return listToMap(headerList);
+    }
+
+    /**
+     * @return all children of a given container recursively
+     */
+    private Collection<Component> getChildrenDeep(Container root) {
+        final Collection<Component> result = root.getChildren();
+        for (Component e : root.getChildren()) {
+            if (e instanceof Container) {
+                result.addAll(getChildrenDeep((Container) e));
+            }
+        }
+        return result;
     }
 
     /**
