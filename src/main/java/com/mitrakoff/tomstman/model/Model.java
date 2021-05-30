@@ -9,7 +9,7 @@ import org.ini4j.Ini;
 import org.ini4j.Profile;
 
 public class Model {
-    static private final MediaType APPLICATION_JSON = MediaType.parse("application/json");
+    static private final String APPLICATION_JSON = "application/json";
 
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
@@ -36,16 +36,18 @@ public class Model {
     public ResponseItem sendRequest(RequestItem item) {
         final long ts = System.currentTimeMillis();
         try {
-            final RequestBody body = RequestBody.create(item.jsonBody, MediaType.parse("application/json"));
+            final RequestBody body = RequestBody.create(item.jsonBody, MediaType.parse(APPLICATION_JSON));
             final Request.Builder builder = new Request.Builder().url(item.url).method(item.method, bodyApplicable(item) ? body : null);
             item.headers.forEach(builder::addHeader);
 
             final Response response = client.newCall(builder.build()).execute();
             final ResponseBody responseBody = response.body();
             final String result = responseBody != null
-                    ? (responseBody.contentType().equals(APPLICATION_JSON)
-                        ? gsonPretty.toJson(gson.fromJson(responseBody.string(), JsonElement.class)) // pretty json
-                        : responseBody.string())
+                    ? (responseBody.contentType() != null
+                        ? (responseBody.contentType().toString().contains(APPLICATION_JSON)
+                            ? gsonPretty.toJson(gson.fromJson(responseBody.string(), JsonElement.class)) // pretty json
+                            : responseBody.string())
+                        : "Invalid content type")
                     : "Invalid response body";
             return new ResponseItem(result, response.code(), System.currentTimeMillis() - ts);
         } catch (Exception e) {
