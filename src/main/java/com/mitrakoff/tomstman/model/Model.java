@@ -43,11 +43,11 @@ public class Model {
             final Response response = client.newCall(builder.build()).execute();
             final ResponseBody responseBody = response.body();
             final String result = responseBody != null
-                    ? (responseBody.contentType() != null
-                        ? (responseBody.contentType().toString().contains(APPLICATION_JSON)
+                    ? responseBody.contentType() != null
+                        ? responseBody.contentType().toString().contains(APPLICATION_JSON)
                             ? gsonPretty.toJson(gson.fromJson(responseBody.string(), JsonElement.class)) // pretty json
-                            : responseBody.string())
-                        : "Invalid content type")
+                            : responseBody.string()
+                        : "Invalid content type"
                     : "Invalid response body";
             return new ResponseItem(result, response.code(), System.currentTimeMillis() - ts);
         } catch (Exception e) {

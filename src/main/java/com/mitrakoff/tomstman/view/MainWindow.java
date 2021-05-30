@@ -63,10 +63,8 @@ public class MainWindow extends BasicWindow {
 
         // shortcuts + version panel
         final Panel shortcutsVersionPanel = new Panel(new BorderLayout());
-        final Label versionLabel = new Label("v1.0.4").setForegroundColor(TextColor.ANSI.GREEN);
-        versionLabel.setPreferredSize(new TerminalSize(versionLabel.getText().length()+1, 1));
         shortcutsVersionPanel.addComponent(shortcutsPanel, BorderLayout.Location.LEFT);
-        shortcutsVersionPanel.addComponent(versionLabel, BorderLayout.Location.RIGHT);
+        shortcutsVersionPanel.addComponent(buildVersionComponent(), BorderLayout.Location.RIGHT);
 
         // content panel
         final Panel contentPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(0));
@@ -210,5 +208,16 @@ public class MainWindow extends BasicWindow {
             result.put(list.get(i), list.get(i+1));
         }
         return result;
+    }
+
+    private Component buildVersionComponent() {
+        String version = getClass().getPackage() != null
+            ? getClass().getPackage().getImplementationVersion() != null
+                ? "v" + getClass().getPackage().getImplementationVersion()
+                : "-"
+            : "-";
+        final Label label = new Label(version).setForegroundColor(TextColor.ANSI.GREEN);
+        label.setPreferredSize(new TerminalSize(label.getText().length()+1, 1));
+        return label;
     }
 }
