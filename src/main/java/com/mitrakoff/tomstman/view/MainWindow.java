@@ -61,6 +61,13 @@ public class MainWindow extends BasicWindow {
         shortcutsPanel.addComponent(new Label("<F8> Remove request"));
         shortcutsPanel.addComponent(new Label("<F10> Exit"));
 
+        // shortcuts + version panel
+        final Panel shortcutsVersionPanel = new Panel(new BorderLayout());
+        final Label versionLabel = new Label("v1.0.4").setForegroundColor(TextColor.ANSI.GREEN);
+        versionLabel.setPreferredSize(new TerminalSize(versionLabel.getText().length()+1, 1));
+        shortcutsVersionPanel.addComponent(shortcutsPanel, BorderLayout.Location.LEFT);
+        shortcutsVersionPanel.addComponent(versionLabel, BorderLayout.Location.RIGHT);
+
         // content panel
         final Panel contentPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(0));
         contentPanel.addComponent(collectionListbox.withBorder(Borders.singleLine(" Request Collection ")), FILL);
@@ -68,7 +75,7 @@ public class MainWindow extends BasicWindow {
 
         // main panel
         final Panel mainPanel = new Panel(new LinearLayout(Direction.VERTICAL));
-        mainPanel.addComponent(shortcutsPanel.withBorder(Borders.singleLine(" T O M S T M A N ")), FILL);
+        mainPanel.addComponent(shortcutsVersionPanel.withBorder(Borders.singleLine(" T O M S T M A N ")), FILL);
         mainPanel.addComponent(contentPanel, FILL_GROW);
 
         // this
