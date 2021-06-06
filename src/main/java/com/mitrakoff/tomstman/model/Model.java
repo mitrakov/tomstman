@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import com.google.gson.*;
+import io.burt.jmespath.gson.GsonRuntime;
 import okhttp3.*;
 import org.ini4j.Ini;
 import org.ini4j.Profile;
@@ -14,6 +15,7 @@ public class Model {
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
     private final Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
+    private final GsonRuntime gsonRuntime = new GsonRuntime();
     private /*final*/ Ini ini;
     private List<RequestItem> requests = Collections.emptyList();
 
@@ -45,7 +47,7 @@ public class Model {
             final String result = responseBody != null
                     ? responseBody.contentType() != null
                         ? responseBody.contentType().toString().contains(APPLICATION_JSON)
-                            ? gsonPretty.toJson(gson.fromJson(responseBody.string(), JsonElement.class)) // pretty json
+                            ? gsonPretty.toJson(jq(item.jmesPath, gson.fromJson(responseBody.string(), JsonElement.class))) // pretty json
                             : responseBody.string()
                         : "Invalid content type"
                     : "Invalid response body";
@@ -92,13 +94,18 @@ public class Model {
 
     private synchronized void addSampleRequests() {
         saveRequests(
-            new RequestItem("GET example.com", "https://example.com", "GET", "", Collections.emptyMap()),
-            new RequestItem("GET google.com", "https://google.com", "GET", "", Collections.emptyMap()),
-            new RequestItem("POST example.com", "https://example.com", "POST", "{\"json\": \"body\"}", Collections.singletonMap("Authorization", "Bearer 12345"))
+            new RequestItem("GET example.com", "https://example.com", "GET", "", "", Collections.emptyMap()),
+            new RequestItem("GET google.com", "https://google.com", "GET", "", "", Collections.emptyMap()),
+            new RequestItem("POST example.com", "https://example.com", "POST", "{\"json\": \"body\"}", "", Collections.singletonMap("Authorization", "Bearer 12345"))
         );
     }
 
     private boolean bodyApplicable(RequestItem item) {
         return !item.method.equals("GET") && !item.method.equals("HEAD");
+    }
+
+    private JsonElement jq(String what, JsonElement where) {
+        if (what.isEmpty()) return where;
+        return gsonRuntime.compile(what).search(where);
     }
 }

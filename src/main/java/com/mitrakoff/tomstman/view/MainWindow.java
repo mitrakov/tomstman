@@ -13,13 +13,14 @@ import com.googlecode.lanterna.input.KeyStroke;
 public class MainWindow extends BasicWindow {
     static private final LayoutData FILL = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill);
     static private final LayoutData FILL_GROW = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow);
-    static private final int BODY_LINES_MIN = 6;
+    static private final int BODY_LINES = 4;
 
     private final Controller controller;
     private final ActionListBox collectionListbox;
     private final TextBox urlTextBox;
     private final ComboBox<String> methodCombobox;
     private final TextBox bodyTextbox;
+    private final TextBox jmesTextbox;
     private final TextBox responseTextbox;
     private final Panel headersPanel;
 
@@ -28,7 +29,8 @@ public class MainWindow extends BasicWindow {
         this.controller = controller;
         urlTextBox = new TextBox("https://");
         methodCombobox = new ComboBox<>("GET", "POST", "PUT", "DELETE", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH");
-        bodyTextbox = new TextBox(new TerminalSize(0, BODY_LINES_MIN), "{\n  \n}", TextBox.Style.MULTI_LINE);
+        bodyTextbox = new TextBox(new TerminalSize(0, BODY_LINES), "{\n  \n}", TextBox.Style.MULTI_LINE);
+        jmesTextbox = new TextBox();
         responseTextbox = new TextBox("", TextBox.Style.MULTI_LINE).setReadOnly(true);
         collectionListbox = new ActionListBox();
         refreshCollectionListbox();
@@ -50,6 +52,7 @@ public class MainWindow extends BasicWindow {
         final Panel requestPanel = new Panel(new LinearLayout(Direction.VERTICAL));
         requestPanel.addComponent(methodUrlHeadersPanel, FILL);
         requestPanel.addComponent(bodyTextbox.withBorder(Borders.singleLine(" Json Body ")), FILL);
+        requestPanel.addComponent(jmesTextbox.withBorder(Borders.singleLine(" Jmes Path ")), FILL);
         requestPanel.addComponent(responseTextbox.withBorder(Borders.singleLine(" Response ")), FILL_GROW);
 
         // shortcuts panel
@@ -105,6 +108,7 @@ public class MainWindow extends BasicWindow {
         urlTextBox.setText(data.url);
         methodCombobox.setSelectedItem(data.method);
         bodyTextbox.setText(data.jsonBody);
+        jmesTextbox.setText(data.jmesPath);
         headersPanel.removeAllComponents();
         for (Map.Entry<String, String> entry : data.headers.entrySet()) {
             addHeader(entry.getKey(), entry.getValue());
@@ -120,6 +124,7 @@ public class MainWindow extends BasicWindow {
         final String url = urlTextBox.getText();
         final String method = methodCombobox.getText();
         final String body = bodyTextbox.getText();
+        final String jmesPath = jmesTextbox.getText();
 
         switch (keyStroke.getKeyType()) {
             case F2:
@@ -127,7 +132,7 @@ public class MainWindow extends BasicWindow {
                 final boolean isOkPressed = newName != null;
                 if (isOkPressed) {
                     if (!newName.isEmpty()) {
-                        controller.saveRequest(newName, url, method, body, getHeaders());
+                        controller.saveRequest(newName, url, method, body, jmesPath, getHeaders());
                         refreshCollectionListbox();
                     } else MessageDialog.showMessageDialog(getTextGUI(), "Error", "Name must not be empty");
                 }
@@ -147,7 +152,7 @@ public class MainWindow extends BasicWindow {
                 final WaitingDialog dialog = WaitingDialog.showDialog(getTextGUI(),"", "Sending request");
                 dialog.setPosition(new TerminalPosition(size.getColumns()/2-10, size.getRows()/2));
                 new Thread(() -> { // dialog is modal, so we have to close() it from another thread
-                    final ResponseData response = controller.sendRequest(url, method, body, getHeaders());
+                    final ResponseData response = controller.sendRequest(url, method, body, jmesPath, getHeaders());
                     final String status = response.status > 0 ? String.valueOf(response.status) : "ERROR";
                     responseTextbox.setText(String.format("Status: %s    Elapsed time: %d msec\n\n%s", status, response.elapsedTimeMsec, response.response));
                     dialog.close();
