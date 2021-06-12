@@ -10,6 +10,7 @@ import com.googlecode.lanterna.graphics.SimpleTheme;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.*;
 import com.googlecode.lanterna.input.KeyStroke;
+import static java.lang.Math.*;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
 public class MainWindow extends BasicWindow {
@@ -245,7 +246,8 @@ public class MainWindow extends BasicWindow {
      */
     private String suggestName(String url) {
         // very basic implementation; need to revise later
-        final String shortUrl = url.substring(0, 32).replace("http://", "").replace("https://", "");
+        final String urlNoProtocol = url.replace("http://", "").replace("https://", "");
+        final String shortUrl = urlNoProtocol.substring(0, min(urlNoProtocol.length(), 32));
         final String[] p = shortUrl.split("/");
         return p.length > 0 ? p[0] : shortUrl;
     }
