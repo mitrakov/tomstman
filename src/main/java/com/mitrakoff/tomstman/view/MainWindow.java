@@ -1,5 +1,7 @@
 package com.mitrakoff.tomstman.view;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -9,7 +11,7 @@ import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.*;
 import com.googlecode.lanterna.input.KeyStroke;
 
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "SameParameterValue"})
 public class MainWindow extends BasicWindow {
     static private final LayoutData FILL = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill);
     static private final LayoutData FILL_GROW = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow);
@@ -21,6 +23,7 @@ public class MainWindow extends BasicWindow {
     private final ComboBox<String> methodCombobox;
     private final TextBox bodyTextbox;
     private final TextBox jmesTextbox;
+    private final Label statusLabel;
     private final TextBox responseTextbox;
     private final Panel headersPanel;
 
@@ -31,6 +34,7 @@ public class MainWindow extends BasicWindow {
         methodCombobox = new ComboBox<>("GET", "POST", "PUT", "DELETE", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH");
         bodyTextbox = new TextBox(new TerminalSize(0, BODY_LINES), "{\n  \n}", TextBox.Style.MULTI_LINE);
         jmesTextbox = new TextBox();
+        statusLabel = new Label("").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT);
         responseTextbox = new TextBox("", TextBox.Style.MULTI_LINE).setReadOnly(true);
         collectionListbox = new ActionListBox();
         refreshCollectionListbox();
@@ -54,6 +58,7 @@ public class MainWindow extends BasicWindow {
         requestPanel.addComponent(bodyTextbox.withBorder(Borders.singleLine(" Json Body ")), FILL);
         requestPanel.addComponent(jmesTextbox.withBorder(Borders.singleLine(" Jmes Path ")), FILL);
         requestPanel.addComponent(responseTextbox.withBorder(Borders.singleLine(" Response ")), FILL_GROW);
+        requestPanel.addComponent(statusLabel, FILL);
 
         // shortcuts panel
         final Panel shortcutsPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(5));
@@ -61,6 +66,7 @@ public class MainWindow extends BasicWindow {
         shortcutsPanel.addComponent(new Label("<F2> Save request"));
         shortcutsPanel.addComponent(new Label("<F3> Add header"));
         shortcutsPanel.addComponent(new Label("<F5> Send request"));
+        shortcutsPanel.addComponent(new Label("<F6> Copy to clipboard"));
         shortcutsPanel.addComponent(new Label("<F8> Remove request"));
         shortcutsPanel.addComponent(new Label("<F10> Exit"));
 
@@ -140,23 +146,28 @@ public class MainWindow extends BasicWindow {
             case F3:
                 addHeader("", "");
                 break;
+            case F5:
+                final DialogWindow sendDialog = buildDialog("", "Sending request");
+                new Thread(() -> { // dialog is modal, so we have to close() it from another thread
+                    final ResponseData response = controller.sendRequest(url, method, body, jmesPath, getHeaders());
+                    final String status = response.status > 0 ? String.valueOf(response.status) : "ERROR";
+                    statusLabel.setText(String.format("Status: %s    Elapsed time: %d msec", status, response.elapsedTimeMsec));
+                    responseTextbox.setText(response.response);
+                    sendDialog.close();
+                }).start();
+                break;
+            case F6:
+                final String s = responseTextbox.getText();
+                final DialogWindow clipboardDialog = buildDialog("", "Copying to clipboard");
+                new Timer().schedule(new TimerTask() {public void run() { clipboardDialog.close();}}, 1000);
+                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(s), null);
+                break;
             case F8:
                 final MessageDialogButton btn = MessageDialog.showMessageDialog(getTextGUI(), "", "Delete request?", MessageDialogButton.Yes, MessageDialogButton.No);
                 if (btn == MessageDialogButton.Yes) {
                     controller.removeRequest(name);
                     refreshCollectionListbox();
                 }
-                break;
-            case F5:
-                final TerminalSize size = getTextGUI().getScreen().getTerminalSize();
-                final WaitingDialog dialog = WaitingDialog.showDialog(getTextGUI(),"", "Sending request");
-                dialog.setPosition(new TerminalPosition(size.getColumns()/2-10, size.getRows()/2));
-                new Thread(() -> { // dialog is modal, so we have to close() it from another thread
-                    final ResponseData response = controller.sendRequest(url, method, body, jmesPath, getHeaders());
-                    final String status = response.status > 0 ? String.valueOf(response.status) : "ERROR";
-                    responseTextbox.setText(String.format("Status: %s    Elapsed time: %d msec\n\n%s", status, response.elapsedTimeMsec, response.response));
-                    dialog.close();
-                }).start();
                 break;
             case F10:
                 close();
@@ -237,5 +248,12 @@ public class MainWindow extends BasicWindow {
         final String shortUrl = url.substring(0, 32).replace("http://", "").replace("https://", "");
         final String[] p = shortUrl.split("/");
         return p.length > 0 ? p[0] : shortUrl;
+    }
+
+    private WaitingDialog buildDialog(String title, String message) {
+        final TerminalSize size = getTextGUI().getScreen().getTerminalSize();
+        final WaitingDialog dialog = WaitingDialog.showDialog(getTextGUI(), title, String.format("%s ", message));
+        dialog.setPosition(new TerminalPosition(size.getColumns()/2-message.length()/2, size.getRows()/2));
+        return dialog;
     }
 }
