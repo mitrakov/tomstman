@@ -128,7 +128,7 @@ public class MainWindow extends BasicWindow {
 
         switch (keyStroke.getKeyType()) {
             case F2:
-                final String newName = TextInputDialog.showDialog(getTextGUI(), "New request", "Input the request name", url);
+                final String newName = TextInputDialog.showDialog(getTextGUI(), "New request", "Input the request name", suggestName(url));
                 final boolean isOkPressed = newName != null;
                 if (isOkPressed) {
                     if (!newName.isEmpty()) {
@@ -215,6 +215,9 @@ public class MainWindow extends BasicWindow {
         return result;
     }
 
+    /**
+     * @return a label with current app version
+     */
     private Component buildVersionComponent() {
         String version = getClass().getPackage() != null
             ? getClass().getPackage().getImplementationVersion() != null
@@ -224,5 +227,15 @@ public class MainWindow extends BasicWindow {
         final Label label = new Label(version).setForegroundColor(TextColor.ANSI.GREEN);
         label.setPreferredSize(new TerminalSize(label.getText().length()+1, 1));
         return label;
+    }
+
+    /**
+     * Suggests a request name by the URI
+     */
+    private String suggestName(String url) {
+        // very basic implementation; need to revise later
+        final String shortUrl = url.substring(0, 32).replace("http://", "").replace("https://", "");
+        final String[] p = shortUrl.split("/");
+        return p.length > 0 ? p[0] : shortUrl;
     }
 }
