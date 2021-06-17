@@ -2,7 +2,6 @@ package com.mitrakoff.tomstman.model;
 
 import java.io.*;
 import java.util.*;
-import java.util.stream.Collectors;
 import com.google.gson.*;
 import io.burt.jmespath.gson.GsonRuntime;
 import okhttp3.*;
@@ -11,13 +10,14 @@ import org.ini4j.Profile;
 
 public class Model {
     static private final String APPLICATION_JSON = "application/json";
+    static private final String SECTION_NAME = "requests";
 
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
     private final Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
     private final GsonRuntime gsonRuntime = new GsonRuntime();
     private /*final*/ Ini ini;
-    private List<RequestItem> requests = Collections.emptyList();
+    private List<RequestItem> requests = new ArrayList<>();
 
     public Model() {
         try {
@@ -59,11 +59,15 @@ public class Model {
         }
     }
 
-    public synchronized void saveRequests(RequestItem ... items) {
+    public synchronized void saveRequest(RequestItem item) {
         try {
-            for (RequestItem item: items) {
-                ini.add("requests", "item", gson.toJson(item));
-            }
+            final String value = gson.toJson(item);
+            final Profile.Section section = ini.get(SECTION_NAME);
+            if (section == null)
+                ini.add(SECTION_NAME, item.name, value);
+            else if (section.containsKey(item.name))
+                section.replace(item.name, value);
+            else section.add(item.name, value);
             ini.store();
             reloadRequests();
         } catch (Exception e) {
@@ -74,30 +78,28 @@ public class Model {
     public synchronized void removeRequest(String name) {
         try {
             requests.removeIf(item -> item.name.equals(name));
-            ini.remove("requests", "item");
-            requests.forEach(item -> ini.add("requests", "item", gson.toJson(item)));
+            ini.remove(SECTION_NAME, name);
             ini.store();
-            reloadRequests();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     private synchronized void reloadRequests() {
-        final Profile.Section section = ini.get("requests");
+        final Profile.Section section = ini.get(SECTION_NAME);
         if (section != null) {
-            final List<String> items = section.getAll("item");
-            if (items != null)
-                this.requests = items.stream().map(s -> gson.fromJson(s, RequestItem.class)).collect(Collectors.toList());
+            requests.clear();
+            for (String key : section.keySet()) { // keySet preserves the order
+                final String value = section.get(key);
+                requests.add(gson.fromJson(value, RequestItem.class));
+            }
         }
     }
 
     private synchronized void addSampleRequests() {
-        saveRequests(
-            new RequestItem("GET example.com", "https://example.com", "GET", "", "", Collections.emptyMap()),
-            new RequestItem("GET google.com", "https://google.com", "GET", "", "", Collections.emptyMap()),
-            new RequestItem("POST example.com", "https://example.com", "POST", "{\"json\": \"body\"}", "", Collections.singletonMap("Authorization", "Bearer 12345"))
-        );
+        saveRequest(new RequestItem("GET example.com", "https://example.com", "GET", "", "", Collections.emptyMap()));
+        saveRequest(new RequestItem("GET google.com", "https://google.com", "GET", "", "", Collections.emptyMap()));
+        saveRequest(new RequestItem("POST example.com", "https://example.com", "POST", "{\"json\": \"body\"}", "", Collections.singletonMap("Authorization", "Bearer 12345")));
     }
 
     private boolean bodyApplicable(RequestItem item) {

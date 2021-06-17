@@ -7,6 +7,8 @@ Simple Console Http Client
 - run `sudo ln -s /full/path/to/tomstman.sh /usr/local/bin/tomstman`
 
 ## Changelog
+- 2021-06-17. v1.0.7: add "Edit Request" feature; refactor "settings.ini" file structure to have unique keys
+- 2021-06-12. v1.0.6: add "Copy to clipboard" feature
 - 2021-06-06. v1.0.5: add JMESPath support
 - 2021-05-30. v1.0.4: fix pretty json for `application/json` subtypes
 - 2021-05-22. v1.0.3: add pretty json for `application/json` responses

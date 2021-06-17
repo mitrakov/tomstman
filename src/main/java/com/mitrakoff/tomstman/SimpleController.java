@@ -13,14 +13,14 @@ public class SimpleController implements Controller {
     }
 
     @Override
-    public ResponseData sendRequest(String url, String method, String jsonBody, String jmes, Map<String, String> headers) {
-        final ResponseItem response = model.sendRequest(new RequestItem("", url, method, jsonBody, jmes, headers));
+    public ResponseData sendRequest(RequestData r) {
+        final ResponseItem response = model.sendRequest(new RequestItem(r.name, r.url, r.method, r.jsonBody, r.jmesPath, r.headers));
         return new ResponseData(response.response, response.status, response.elapsedTimeMsec);
     }
 
     @Override
-    public void saveRequest(String name, String url, String method, String jsonBody, String jmes, Map<String, String> headers) {
-        model.saveRequests(new RequestItem(name, url, method, jsonBody, jmes, headers));
+    public void saveRequest(RequestData r) {
+        model.saveRequest(new RequestItem(r.name, r.url, r.method, r.jsonBody, r.jmesPath, r.headers));
     }
 
     @Override

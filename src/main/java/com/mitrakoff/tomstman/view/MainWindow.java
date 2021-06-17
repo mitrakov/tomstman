@@ -17,6 +17,8 @@ public class MainWindow extends BasicWindow {
     static private final LayoutData FILL = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill);
     static private final LayoutData FILL_GROW = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow);
     static private final int BODY_LINES = 4;
+    static private final String INITIAL_JSON = "{\n  \n}";
+    static private final RequestData EMPTY_REQUEST = new RequestData("", "https://", "GET", INITIAL_JSON, "", Collections.emptyMap());
 
     private final Controller controller;
     private final ActionListBox collectionListbox;
@@ -28,12 +30,14 @@ public class MainWindow extends BasicWindow {
     private final TextBox responseTextbox;
     private final Panel headersPanel;
 
+    private RequestData currentRequest = EMPTY_REQUEST;
+
     public MainWindow(String title, Controller controller) {
         super(title);
         this.controller = controller;
         urlTextBox = new TextBox("https://");
         methodCombobox = new ComboBox<>("GET", "POST", "PUT", "DELETE", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH");
-        bodyTextbox = new TextBox(new TerminalSize(0, BODY_LINES), "{\n  \n}", TextBox.Style.MULTI_LINE);
+        bodyTextbox = new TextBox(new TerminalSize(0, BODY_LINES), INITIAL_JSON, TextBox.Style.MULTI_LINE);
         jmesTextbox = new TextBox();
         statusLabel = new Label("").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT);
         responseTextbox = new TextBox("", TextBox.Style.MULTI_LINE).setReadOnly(true);
@@ -63,13 +67,14 @@ public class MainWindow extends BasicWindow {
 
         // shortcuts panel
         final Panel shortcutsPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(5));
-        shortcutsPanel.addComponent(new Label(""));
-        shortcutsPanel.addComponent(new Label("<F2> Save request"));
-        shortcutsPanel.addComponent(new Label("<F3> Add header"));
-        shortcutsPanel.addComponent(new Label("<F5> Send request"));
-        shortcutsPanel.addComponent(new Label("<F6> Copy to clipboard"));
-        shortcutsPanel.addComponent(new Label("<F8> Remove request"));
-        shortcutsPanel.addComponent(new Label("<F10> Exit"));
+        shortcutsPanel.addComponent(new Label("").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F2> Save request").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F3> Add header").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F4> New request").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F5> Send request").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F6> Copy to clipboard").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F8> Remove request").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F10> Exit").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
 
         // shortcuts + version panel
         final Panel shortcutsVersionPanel = new Panel(new BorderLayout());
@@ -111,46 +116,72 @@ public class MainWindow extends BasicWindow {
         controller.getRequests().forEach(request -> collectionListbox.addItem(request.toString(), () -> this.setDataToComponents(request)));
     }
 
-    private void setDataToComponents(RequestData data) {
-        urlTextBox.setText(data.url);
-        methodCombobox.setSelectedItem(data.method);
-        bodyTextbox.setText(data.jsonBody);
-        jmesTextbox.setText(data.jmesPath);
+    private void setDataToComponents(RequestData request) {
+        saveRequestIfNeeded();
+        currentRequest = request;
+
+        urlTextBox.setText(request.url);
+        methodCombobox.setSelectedItem(request.method);
+        bodyTextbox.setText(request.jsonBody);
+        jmesTextbox.setText(request.jmesPath);
+        responseTextbox.setText("");
         headersPanel.removeAllComponents();
-        for (Map.Entry<String, String> entry : data.headers.entrySet()) {
+        for (Map.Entry<String, String> entry : request.headers.entrySet()) {
             addHeader(entry.getKey(), entry.getValue());
         }
+
+        // this code is to avoid a bug when the focus was inside "headersPanel" and we removed all headers 3 lines above
+        if (!collectionListbox.isFocused())
+            urlTextBox.takeFocus();
+    }
+
+    private void saveRequestIfNeeded() {
+        if (currentRequest.equals(EMPTY_REQUEST)) return;
+
+        final RequestData updatedRequest = makeRequest();
+        if (!currentRequest.equals(updatedRequest)) {
+            final MessageDialogButton btn = MessageDialog.showMessageDialog(getTextGUI(), "", String.format("Save request '%s'?", currentRequest.name), MessageDialogButton.Yes, MessageDialogButton.No);
+            if (btn == MessageDialogButton.Yes)
+                saveRequest(updatedRequest);
+        }
+    }
+
+    private void saveRequest(RequestData request) {
+        controller.saveRequest(request);
+        refreshCollectionListbox();
+        currentRequest = request;
     }
 
     /**
      * Shortcut events processor
      */
     private void handleHotkeys(KeyStroke keyStroke) {
-        final int selectedIdx = collectionListbox.getSelectedIndex();
-        final String name = selectedIdx >= 0 ? controller.getRequests().get(selectedIdx).name : "";
-        final String url = urlTextBox.getText();
-        final String method = methodCombobox.getText();
-        final String body = bodyTextbox.getText();
-        final String jmesPath = jmesTextbox.getText();
-
+        final RequestData request = makeRequest();
         switch (keyStroke.getKeyType()) {
             case F2:
-                final String newName = TextInputDialog.showDialog(getTextGUI(), "New request", "Input the request name", suggestName(url));
-                final boolean isOkPressed = newName != null;
-                if (isOkPressed) {
-                    if (!newName.isEmpty()) {
-                        controller.saveRequest(newName, url, method, body, jmesPath, getHeaders());
-                        refreshCollectionListbox();
-                    } else MessageDialog.showMessageDialog(getTextGUI(), "Error", "Name must not be empty");
+                if (currentRequest.equals(EMPTY_REQUEST)) {
+                    final String newName = TextInputDialog.showDialog(getTextGUI(), "New request", "Input the request name", suggestName(request.url));
+                    final boolean isOkPressed = newName != null;
+                    if (isOkPressed) {
+                        if (!newName.isEmpty()) saveRequest(request);
+                        else MessageDialog.showMessageDialog(getTextGUI(), "Error", "Name must not be empty");
+                    }
+                } else if (!currentRequest.equals(request)) {
+                    final DialogWindow dialog = buildDialog("", String.format("Saving request '%s'", request.name));
+                    new Timer().schedule(new TimerTask() {public void run() { dialog.close();}}, 1000);
+                    saveRequest(request);
                 }
                 break;
             case F3:
                 addHeader("", "");
                 break;
+            case F4:
+                setDataToComponents(EMPTY_REQUEST);
+                break;
             case F5:
                 final DialogWindow sendDialog = buildDialog("", "Sending request");
                 new Thread(() -> { // dialog is modal, so we have to close() it from another thread
-                    final ResponseData response = controller.sendRequest(url, method, body, jmesPath, getHeaders());
+                    final ResponseData response = controller.sendRequest(request);
                     final String status = response.status > 0 ? String.valueOf(response.status) : "ERROR";
                     statusLabel.setText(String.format("Status: %s    Elapsed time: %d msec", status, response.elapsedTimeMsec));
                     responseTextbox.setText(response.response);
@@ -164,16 +195,32 @@ public class MainWindow extends BasicWindow {
                 Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(s), null);
                 break;
             case F8:
-                final MessageDialogButton btn = MessageDialog.showMessageDialog(getTextGUI(), "", "Delete request?", MessageDialogButton.Yes, MessageDialogButton.No);
-                if (btn == MessageDialogButton.Yes) {
-                    controller.removeRequest(name);
-                    refreshCollectionListbox();
+                final int selectedIdx = collectionListbox.getSelectedIndex();
+                if (selectedIdx >= 0) {
+                    final String name = controller.getRequests().get(selectedIdx).name;
+                    final MessageDialogButton btn = MessageDialog.showMessageDialog(getTextGUI(), "", String.format("Delete request '%s'?", name), MessageDialogButton.Yes, MessageDialogButton.No);
+                    if (btn == MessageDialogButton.Yes) {
+                        controller.removeRequest(name);
+                        refreshCollectionListbox();
+                        if (name.equals(currentRequest.name))
+                            currentRequest = EMPTY_REQUEST;
+                    }
                 }
                 break;
             case F10:
+                saveRequestIfNeeded();
                 close();
                 break;
         }
+    }
+
+    private RequestData makeRequest() {
+        final String name = currentRequest.name;
+        final String url = urlTextBox.getText();
+        final String method = methodCombobox.getText();
+        final String body = bodyTextbox.getText();
+        final String jmesPath = jmesTextbox.getText();
+        return new RequestData(name, url, method, body, jmesPath, getHeaders());
     }
 
     /**
