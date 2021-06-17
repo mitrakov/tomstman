@@ -29,6 +29,7 @@ public class Model {
             else reloadRequests();
         } catch (Exception e) {
             e.printStackTrace();
+            System.exit(1);
         }
     }
     public List<RequestItem> getRequests() {
@@ -53,14 +54,14 @@ public class Model {
                     : "Invalid response body";
             return new ResponseItem(result, response.code(), System.currentTimeMillis() - ts);
         } catch (Exception e) {
-            final StringWriter writer = new StringWriter();
-            e.printStackTrace(new PrintWriter(writer));
-            return new ResponseItem(writer.toString(), 0, System.currentTimeMillis() - ts);
+            return new ResponseItem(String.format("ERROR: %s", e.getMessage()), 0, System.currentTimeMillis() - ts);
         }
     }
 
     public synchronized void saveRequest(RequestItem item) {
         try {
+            if (item.name.isEmpty()) return; // invalid INI key
+
             final String value = gson.toJson(item);
             final Profile.Section section = ini.get(SECTION_NAME);
             if (section == null)
