@@ -138,7 +138,7 @@ public class MainWindow extends BasicWindow {
     private void saveRequestIfNeeded() {
         if (currentRequest.equals(EMPTY_REQUEST)) return;
 
-        final RequestData updatedRequest = makeRequest();
+        final RequestData updatedRequest = makeRequest(currentRequest.name);
         if (!currentRequest.equals(updatedRequest)) {
             final MessageDialogButton btn = MessageDialog.showMessageDialog(getTextGUI(), "", String.format("Save request '%s'?", currentRequest.name), MessageDialogButton.Yes, MessageDialogButton.No);
             if (btn == MessageDialogButton.Yes)
@@ -156,14 +156,14 @@ public class MainWindow extends BasicWindow {
      * Shortcut events processor
      */
     private void handleHotkeys(KeyStroke keyStroke) {
-        final RequestData request = makeRequest();
+        final RequestData request = makeRequest(currentRequest.name);
         switch (keyStroke.getKeyType()) {
             case F2:
                 if (currentRequest.equals(EMPTY_REQUEST)) {
                     final String newName = TextInputDialog.showDialog(getTextGUI(), "New request", "Input the request name", suggestName(request.url));
                     final boolean isOkPressed = newName != null;
                     if (isOkPressed) {
-                        if (!newName.isEmpty()) saveRequest(request);
+                        if (!newName.isEmpty()) saveRequest(makeRequest(newName));
                         else MessageDialog.showMessageDialog(getTextGUI(), "Error", "Name must not be empty");
                     }
                 } else if (!currentRequest.equals(request)) {
@@ -214,8 +214,7 @@ public class MainWindow extends BasicWindow {
         }
     }
 
-    private RequestData makeRequest() {
-        final String name = currentRequest.name;
+    private RequestData makeRequest(String name) {
         final String url = urlTextBox.getText();
         final String method = methodCombobox.getText();
         final String body = bodyTextbox.getText();
