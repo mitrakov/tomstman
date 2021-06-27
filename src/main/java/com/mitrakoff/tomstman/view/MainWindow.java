@@ -12,12 +12,14 @@ import com.googlecode.lanterna.gui2.dialogs.*;
 import com.googlecode.lanterna.input.KeyStroke;
 import static java.lang.Math.*;
 
-@SuppressWarnings({"WeakerAccess", "SameParameterValue"})
+@SuppressWarnings({"WeakerAccess", "SameParameterValue", "OptionalUsedAsFieldOrParameterType"})
 public class MainWindow extends BasicWindow {
     static private final LayoutData FILL = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill);
     static private final LayoutData FILL_GROW = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow);
     static private final int BODY_LINES = 4;
     static private final String INITIAL_JSON = "{}";
+    static private final String ADD_HEADER = "<F3> Add header";
+    static private final String REMOVE_HEADER = "<F3> Del header";
     static private final RequestData EMPTY_REQUEST = new RequestData("", "https://", "GET", INITIAL_JSON, "", Collections.emptyMap());
 
     private final Controller controller;
@@ -29,8 +31,10 @@ public class MainWindow extends BasicWindow {
     private final Label statusLabel;
     private final TextBox responseTextbox;
     private final Panel headersPanel;
+    private final Label addHeaderLabel;
 
     private RequestData currentRequest = EMPTY_REQUEST;
+    private Optional<String> currentHeader = Optional.empty();
 
     public MainWindow(String title, Controller controller) {
         super(title);
@@ -39,9 +43,10 @@ public class MainWindow extends BasicWindow {
         methodCombobox = new ComboBox<>("GET", "POST", "PUT", "DELETE", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH");
         bodyTextbox = new TextBox(new TerminalSize(0, BODY_LINES), INITIAL_JSON, TextBox.Style.MULTI_LINE);
         jmesTextbox = new TextBox();
-        statusLabel = new Label("").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT);
+        statusLabel = new Label("").setForegroundColor(TextColor.ANSI.RED_BRIGHT);
         responseTextbox = new TextBox("", TextBox.Style.MULTI_LINE).setReadOnly(true);
         collectionListbox = new ActionListBox();
+        addHeaderLabel = new Label(ADD_HEADER);
         refreshCollectionListbox();
 
         // panel with Method and URL
@@ -67,14 +72,14 @@ public class MainWindow extends BasicWindow {
 
         // shortcuts panel
         final Panel shortcutsPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(5));
-        shortcutsPanel.addComponent(new Label("").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
-        shortcutsPanel.addComponent(new Label("<F2> Save request").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
-        shortcutsPanel.addComponent(new Label("<F3> Add header").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
-        shortcutsPanel.addComponent(new Label("<F4> New request").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
-        shortcutsPanel.addComponent(new Label("<F5> Send request").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
-        shortcutsPanel.addComponent(new Label("<F6> Copy to clipboard").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
-        shortcutsPanel.addComponent(new Label("<F8> Remove request").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
-        shortcutsPanel.addComponent(new Label("<F10> Exit").setForegroundColor(TextColor.ANSI.BLUE_BRIGHT));
+        shortcutsPanel.addComponent(new Label("").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F2> Save request").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        shortcutsPanel.addComponent(addHeaderLabel.setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F4> New request").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F5> Send request").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F6> Copy to clipboard").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F8> Remove request").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F10> Exit").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
 
         // shortcuts + version panel
         final Panel shortcutsVersionPanel = new Panel(new BorderLayout());
@@ -125,12 +130,15 @@ public class MainWindow extends BasicWindow {
         bodyTextbox.setText(request.jsonBody);
         jmesTextbox.setText(request.jmesPath);
         responseTextbox.setText("");
+        updateHeaders(request.headers);
+    }
+
+    private void updateHeaders(Map<String, String> headers) {
         headersPanel.removeAllComponents();
-        for (Map.Entry<String, String> entry : request.headers.entrySet()) {
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
             addHeader(entry.getKey(), entry.getValue());
         }
-
-        // this code is to avoid a bug when the focus was inside "headersPanel" and we removed all headers 3 lines above
+        // this code is to avoid a bug when the focus was inside "headersPanel" and we removed all headers 4 lines above
         if (!collectionListbox.isFocused())
             urlTextBox.takeFocus();
     }
@@ -179,7 +187,9 @@ public class MainWindow extends BasicWindow {
                 }
                 break;
             case F3:
-                addHeader("", "");
+                if (currentHeader.isPresent()) {
+                    removeHeader(currentHeader.get());
+                } else addHeader("", "");
                 break;
             case F4:
                 setDataToComponents(EMPTY_REQUEST);
@@ -232,11 +242,47 @@ public class MainWindow extends BasicWindow {
      * Adds a new Header-Key and Header-Value textboxes into HeaderPanel
      */
     private void addHeader(String key, String value) {
-        final Panel row = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(0));
-        row.addComponent(new TextBox(new TerminalSize(16, 1), key).withBorder(Borders.singleLine(" Header name ")), FILL);
-        row.addComponent(new TextBox(value).withBorder(Borders.singleLine(" Header value ")), FILL_GROW);
+        final TextBox headerKey = new TextBox(new TerminalSize(16, 1), key) {
+            @Override
+            protected void afterEnterFocus(FocusChangeDirection direction, Interactable previouslyInFocus) {
+                super.afterEnterFocus(direction, previouslyInFocus);
+                currentHeader = Optional.of(this.getText());
+                addHeaderLabel.setText(REMOVE_HEADER);
+            }
 
+            @Override
+            protected void afterLeaveFocus(FocusChangeDirection direction, Interactable nextInFocus) {
+                super.afterLeaveFocus(direction, nextInFocus);
+                currentHeader = Optional.empty();
+                addHeaderLabel.setText(ADD_HEADER);
+            }
+        };
+        final TextBox headerValue = new TextBox(value) {
+            @Override
+            protected void afterEnterFocus(FocusChangeDirection direction, Interactable previouslyInFocus) {
+                super.afterEnterFocus(direction, previouslyInFocus);
+                currentHeader = Optional.of(headerKey.getText());
+                addHeaderLabel.setText(REMOVE_HEADER);
+            }
+
+            @Override
+            protected void afterLeaveFocus(FocusChangeDirection direction, Interactable nextInFocus) {
+                super.afterLeaveFocus(direction, nextInFocus);
+                currentHeader = Optional.empty();
+                addHeaderLabel.setText(ADD_HEADER);
+            }
+        };
+
+        final Panel row = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(0));
+        row.addComponent(headerKey.withBorder(Borders.singleLine(" Header name ")), FILL);
+        row.addComponent(headerValue.withBorder(Borders.singleLine(" Header value ")), FILL_GROW);
         headersPanel.addComponent(row, FILL_GROW);
+    }
+
+    private void removeHeader(String headerKey) {
+        final Map<String, String> headers = getHeaders();
+        headers.remove(headerKey);
+        updateHeaders(headers);
     }
 
     /**
