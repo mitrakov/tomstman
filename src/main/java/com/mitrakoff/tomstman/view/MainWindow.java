@@ -17,7 +17,7 @@ public class MainWindow extends BasicWindow {
     static private final LayoutData FILL = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill);
     static private final LayoutData FILL_GROW = LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow);
     static private final int BODY_LINES = 4;
-    static private final String INITIAL_JSON = "{\n  \n}";
+    static private final String INITIAL_JSON = "{}";
     static private final RequestData EMPTY_REQUEST = new RequestData("", "https://", "GET", INITIAL_JSON, "", Collections.emptyMap());
 
     private final Controller controller;
@@ -136,13 +136,24 @@ public class MainWindow extends BasicWindow {
     }
 
     private void saveRequestIfNeeded() {
-        if (currentRequest.equals(EMPTY_REQUEST)) return;
-
         final RequestData updatedRequest = makeRequest(currentRequest.name);
         if (!currentRequest.equals(updatedRequest)) {
-            final MessageDialogButton btn = MessageDialog.showMessageDialog(getTextGUI(), "", String.format("Save request '%s'?", currentRequest.name), MessageDialogButton.Yes, MessageDialogButton.No);
-            if (btn == MessageDialogButton.Yes)
-                saveRequest(updatedRequest);
+            if (currentRequest.equals(EMPTY_REQUEST)) {
+                saveEmptyRequest(updatedRequest, "Save new request?");
+            } else {
+                final MessageDialogButton btn = MessageDialog.showMessageDialog(getTextGUI(), "", String.format("Save request '%s'?", currentRequest.name), MessageDialogButton.Yes, MessageDialogButton.No);
+                if (btn == MessageDialogButton.Yes)
+                    saveRequest(updatedRequest);
+            }
+        }
+    }
+
+    private void saveEmptyRequest(RequestData request, String title) {
+        final String newName = TextInputDialog.showDialog(getTextGUI(), String.format(" %s ", title), "Input the request name", suggestName(request.url));
+        final boolean isOkPressed = newName != null;
+        if (isOkPressed) {
+            if (!newName.isEmpty()) saveRequest(makeRequest(newName));
+            else MessageDialog.showMessageDialog(getTextGUI(), "Error", "Name must not be empty");
         }
     }
 
@@ -160,12 +171,7 @@ public class MainWindow extends BasicWindow {
         switch (keyStroke.getKeyType()) {
             case F2:
                 if (currentRequest.equals(EMPTY_REQUEST)) {
-                    final String newName = TextInputDialog.showDialog(getTextGUI(), "New request", "Input the request name", suggestName(request.url));
-                    final boolean isOkPressed = newName != null;
-                    if (isOkPressed) {
-                        if (!newName.isEmpty()) saveRequest(makeRequest(newName));
-                        else MessageDialog.showMessageDialog(getTextGUI(), "Error", "Name must not be empty");
-                    }
+                    saveEmptyRequest(request, "New request");
                 } else if (!currentRequest.equals(request)) {
                     final DialogWindow dialog = buildDialog("", String.format("Saving request '%s'", request.name));
                     new Timer().schedule(new TimerTask() {public void run() { dialog.close();}}, 1000);
