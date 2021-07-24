@@ -71,15 +71,16 @@ public class MainWindow extends BasicWindow {
         requestPanel.addComponent(statusLabel, FILL);
 
         // shortcuts panel
-        final Panel shortcutsPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(5));
-        shortcutsPanel.addComponent(new Label("").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
-        shortcutsPanel.addComponent(new Label("<F2> Save request").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        final Panel shortcutsPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(3));
+        shortcutsPanel.addComponent(new Label(" <F2> Save request").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
         shortcutsPanel.addComponent(addHeaderLabel.setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
         shortcutsPanel.addComponent(new Label("<F4> New request").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
         shortcutsPanel.addComponent(new Label("<F5> Send request").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
         shortcutsPanel.addComponent(new Label("<F6> Copy to clipboard").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
         shortcutsPanel.addComponent(new Label("<F8> Remove request").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
         shortcutsPanel.addComponent(new Label("<F10> Exit").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F11> Up").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
+        shortcutsPanel.addComponent(new Label("<F12> Down").setForegroundColor(TextColor.ANSI.CYAN_BRIGHT));
 
         // shortcuts + version panel
         final Panel shortcutsVersionPanel = new Panel(new BorderLayout());
@@ -177,7 +178,7 @@ public class MainWindow extends BasicWindow {
     private void handleHotkeys(KeyStroke keyStroke) {
         final RequestData request = makeRequest(currentRequest.name);
         switch (keyStroke.getKeyType()) {
-            case F2:
+            case F2: {
                 if (currentRequest.equals(EMPTY_REQUEST)) {
                     saveEmptyRequest(request, "New request");
                 } else if (!currentRequest.equals(request)) {
@@ -186,15 +187,18 @@ public class MainWindow extends BasicWindow {
                     saveRequest(request);
                 }
                 break;
-            case F3:
+            }
+            case F3: {
                 if (currentHeader.isPresent()) {
                     removeHeader(currentHeader.get());
                 } else addHeader("", "");
                 break;
-            case F4:
+            }
+            case F4: {
                 setDataToComponents(EMPTY_REQUEST);
                 break;
-            case F5:
+            }
+            case F5: {
                 final DialogWindow sendDialog = buildDialog("", "Sending request");
                 new Thread(() -> { // dialog is modal, so we have to close() it from another thread
                     final ResponseData response = controller.sendRequest(request);
@@ -204,13 +208,15 @@ public class MainWindow extends BasicWindow {
                     sendDialog.close();
                 }).start();
                 break;
-            case F6:
-                final String s = responseTextbox.getText();
+            }
+            case F6: {
+                final String response = responseTextbox.getText();
                 final DialogWindow clipboardDialog = buildDialog("", "Copying to clipboard");
                 new Timer().schedule(new TimerTask() {public void run() { clipboardDialog.close();}}, 1000);
-                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(s), null);
+                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(response), null);
                 break;
-            case F8:
+            }
+            case F8: {
                 final int selectedIdx = collectionListbox.getSelectedIndex();
                 if (selectedIdx >= 0) {
                     final String name = controller.getRequests().get(selectedIdx).name;
@@ -223,10 +229,28 @@ public class MainWindow extends BasicWindow {
                     }
                 }
                 break;
-            case F10:
+            }
+            case F10: {
                 saveRequestIfNeeded();
                 close();
                 break;
+            }
+            case F11: {
+                final int selectedIdx = collectionListbox.getSelectedIndex();
+                if (selectedIdx >= 1) {
+                    controller.moveRequestUp(selectedIdx);
+                    refreshCollectionListbox();
+                }
+                break;
+            }
+            case F12: {
+                final int selectedIdx = collectionListbox.getSelectedIndex();
+                if (0 <= selectedIdx && selectedIdx < collectionListbox.getItemCount() - 1) {
+                    controller.moveRequestDown(selectedIdx);
+                    refreshCollectionListbox();
+                }
+                break;
+            }
         }
     }
 

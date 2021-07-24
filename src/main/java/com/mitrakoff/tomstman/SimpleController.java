@@ -29,6 +29,16 @@ public class SimpleController implements Controller {
     }
 
     @Override
+    public void moveRequestUp(int index) {
+        model.moveRequest(index, true);
+    }
+
+    @Override
+    public void moveRequestDown(int index) {
+        model.moveRequest(index, false);
+    }
+
+    @Override
     public List<RequestData> getRequests() {
         return model.getRequests().stream().map(r -> new RequestData(r.name, r.url, r.method, r.jsonBody, r.jmesPath, r.headers)).collect(Collectors.toList());
     }

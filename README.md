@@ -7,6 +7,7 @@ Simple Console Http Client
 - run `sudo ln -s /full/path/to/tomstman.sh /usr/local/bin/tomstman`
 
 ## Changelog
+- 2021-07-24. v1.1.0: add "Move request Up" and "Move request Down" features 
 - 2021-06-27. v1.0.9: add "Remove header" feature; add saving new requests on exit 
 - 2021-06-18. v1.0.8: fix bug with saving a new request
 - 2021-06-17. v1.0.7: add "Edit Request" feature; refactor "settings.ini" file structure to have unique keys

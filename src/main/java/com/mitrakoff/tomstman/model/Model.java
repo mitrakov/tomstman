@@ -86,6 +86,24 @@ public class Model {
         }
     }
 
+    public synchronized void moveRequest(int index, boolean upOrDown) {
+        try {
+            final boolean isSafe = upOrDown ? index > 0 : index < requests.size() - 1;
+            if (isSafe) {
+                final RequestItem item = requests.get(index);
+                final int indexToDuplicate = upOrDown ? index - 1 : index + 2;
+                final int indexToRemove = upOrDown ? index + 1 : index;
+
+                requests.add(indexToDuplicate, item);
+                requests.remove(indexToRemove);
+                ini.remove(SECTION_NAME);
+                new ArrayList<>(requests).forEach(this::saveRequest);    // rebuild ini-file again (note we use a COPY of original list)
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private synchronized void reloadRequests() {
         final Profile.Section section = ini.get(SECTION_NAME);
         if (section != null) {
