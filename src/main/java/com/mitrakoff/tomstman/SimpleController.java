@@ -20,7 +20,7 @@ public class SimpleController implements Controller {
 
     @Override
     public void saveRequest(RequestData r) {
-        model.saveRequest(new RequestItem(r.name, r.url, r.method, r.jsonBody, r.jmesPath, r.headers));
+        model.saveRequests(new RequestItem(r.name, r.url, r.method, r.jsonBody, r.jmesPath, r.headers));
     }
 
     @Override

@@ -17,7 +17,7 @@ public class Model {
     private final Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
     private final GsonRuntime gsonRuntime = new GsonRuntime();
     private /*final*/ Ini ini;
-    private List<RequestItem> requests = new ArrayList<>();
+    private final List<RequestItem> requests = new ArrayList<>();
 
     public Model() {
         try {
@@ -58,17 +58,19 @@ public class Model {
         }
     }
 
-    public synchronized void saveRequest(RequestItem item) {
+    public synchronized void saveRequests(RequestItem ... items) {
         try {
-            if (item.name.isEmpty()) return; // invalid INI key
-
-            final String value = gson.toJson(item);
             final Profile.Section section = ini.get(SECTION_NAME);
-            if (section == null)
-                ini.add(SECTION_NAME, item.name, value);
-            else if (section.containsKey(item.name))
-                section.replace(item.name, value);
-            else section.add(item.name, value);
+            for (RequestItem item : items) {
+                if (item.name.isEmpty()) continue; // invalid INI key
+
+                final String value = gson.toJson(item);
+                if (section == null)
+                    ini.add(SECTION_NAME, item.name, value);
+                else if (section.containsKey(item.name))
+                    section.replace(item.name, value);
+                else section.add(item.name, value);
+            }
             ini.store();
             reloadRequests();
         } catch (Exception e) {
@@ -97,7 +99,7 @@ public class Model {
                 requests.add(indexToDuplicate, item);
                 requests.remove(indexToRemove);
                 ini.remove(SECTION_NAME);
-                new ArrayList<>(requests).forEach(this::saveRequest);    // rebuild ini-file again (note we use a COPY of original list)
+                saveRequests(requests.toArray(new RequestItem[0]));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -116,9 +118,11 @@ public class Model {
     }
 
     private synchronized void addSampleRequests() {
-        saveRequest(new RequestItem("GET example.com", "https://example.com", "GET", "", "", Collections.emptyMap()));
-        saveRequest(new RequestItem("GET google.com", "https://google.com", "GET", "", "", Collections.emptyMap()));
-        saveRequest(new RequestItem("POST example.com", "https://example.com", "POST", "{\"json\": \"body\"}", "", Collections.singletonMap("Authorization", "Bearer 12345")));
+        saveRequests(
+            new RequestItem("GET example.com", "https://example.com", "GET", "", "", Collections.emptyMap()),
+            new RequestItem("GET google.com", "https://google.com", "GET", "", "", Collections.emptyMap()),
+            new RequestItem("POST example.com", "https://example.com", "POST", "{\"json\": \"body\"}", "", Collections.singletonMap("Authorization", "Bearer 12345"))
+        );
     }
 
     private boolean bodyApplicable(RequestItem item) {
