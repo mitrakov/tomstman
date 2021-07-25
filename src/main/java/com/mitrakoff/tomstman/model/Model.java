@@ -2,12 +2,14 @@ package com.mitrakoff.tomstman.model;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.Consumer;
 import com.google.gson.*;
 import io.burt.jmespath.gson.GsonRuntime;
 import okhttp3.*;
 import org.ini4j.Ini;
 import org.ini4j.Profile;
 
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class Model {
     static private final String APPLICATION_JSON = "application/json";
     static private final String SECTION_NAME = "requests";
@@ -16,8 +18,9 @@ public class Model {
     private final Gson gson = new Gson();
     private final Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
     private final GsonRuntime gsonRuntime = new GsonRuntime();
-    private /*final*/ Ini ini;
     private final List<RequestItem> requests = new ArrayList<>();
+    private /*final*/ Ini ini;
+    private Optional<Consumer<Throwable>> errorHandler;
 
     public Model() {
         try {
@@ -27,11 +30,16 @@ public class Model {
             if (newFileWasCreated)
                 addSampleRequests();
             else reloadRequests();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             System.exit(1);
         }
     }
+
+    public void setErrorHandler(Consumer<Throwable> handler) {
+        errorHandler = Optional.ofNullable(handler);
+    }
+
     public List<RequestItem> getRequests() {
         return requests;
     }
@@ -53,7 +61,7 @@ public class Model {
                         : "Invalid content type"
                     : "Invalid response body";
             return new ResponseItem(result, response.code(), System.currentTimeMillis() - ts);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return new ResponseItem(String.format("ERROR: %s", e.getMessage()), 0, System.currentTimeMillis() - ts);
         }
     }
@@ -73,8 +81,10 @@ public class Model {
             }
             ini.store();
             reloadRequests();
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable e) {
+            if (errorHandler.isPresent())
+                errorHandler.get().accept(e);
+            else e.printStackTrace();
         }
     }
 
@@ -83,8 +93,10 @@ public class Model {
             requests.removeIf(item -> item.name.equals(name));
             ini.remove(SECTION_NAME, name);
             ini.store();
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable e) {
+            if (errorHandler.isPresent())
+                errorHandler.get().accept(e);
+            else e.printStackTrace();
         }
     }
 
@@ -101,28 +113,42 @@ public class Model {
                 ini.remove(SECTION_NAME);
                 saveRequests(requests.toArray(new RequestItem[0]));
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable e) {
+            if (errorHandler.isPresent())
+                errorHandler.get().accept(e);
+            else e.printStackTrace();
         }
     }
 
     private synchronized void reloadRequests() {
-        final Profile.Section section = ini.get(SECTION_NAME);
-        if (section != null) {
-            requests.clear();
-            for (String key : section.keySet()) { // keySet preserves the order
-                final String value = section.get(key);
-                requests.add(gson.fromJson(value, RequestItem.class));
+        try {
+            final Profile.Section section = ini.get(SECTION_NAME);
+            if (section != null) {
+                requests.clear();
+                for (String key : section.keySet()) { // keySet preserves the order
+                    final String value = section.get(key);
+                    requests.add(gson.fromJson(value, RequestItem.class));
+                }
             }
+        } catch (Throwable e) {
+            if (errorHandler.isPresent())
+                errorHandler.get().accept(e);
+            else e.printStackTrace();
         }
     }
 
     private synchronized void addSampleRequests() {
-        saveRequests(
-            new RequestItem("GET example.com", "https://example.com", "GET", "", "", Collections.emptyMap()),
-            new RequestItem("GET google.com", "https://google.com", "GET", "", "", Collections.emptyMap()),
-            new RequestItem("POST example.com", "https://example.com", "POST", "{\"json\": \"body\"}", "", Collections.singletonMap("Authorization", "Bearer 12345"))
-        );
+        try {
+            saveRequests(
+                new RequestItem("GET example.com", "https://example.com", "GET", "", "", Collections.emptyMap()),
+                new RequestItem("GET google.com", "https://google.com", "GET", "", "", Collections.emptyMap()),
+                new RequestItem("POST example.com", "https://example.com", "POST", "{\"json\": \"body\"}", "", Collections.singletonMap("Authorization", "Bearer 12345"))
+            );
+        } catch (Throwable e) {
+            if (errorHandler.isPresent())
+                errorHandler.get().accept(e);
+            else e.printStackTrace();
+        }
     }
 
     private boolean bodyApplicable(RequestItem item) {

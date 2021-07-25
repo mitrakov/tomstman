@@ -3,8 +3,7 @@
 - save as new
 - duplicate
 - show current request name
-- sort the collections list
-- do not e.printStackTrace
+- settings.ini -> ~/.tomstman/settings.ini
 
 # Bugs
 - Not found -> invalid request type
